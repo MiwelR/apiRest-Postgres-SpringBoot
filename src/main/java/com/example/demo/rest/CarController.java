@@ -30,6 +30,19 @@ public class CarController {
 		this.carRepository = carRepository;
 	}
 	
+	// find by doors
+	/**
+	 * http://localhost:8081/api/cars/doors/1
+	 * @return a response entity with car
+	 */
+	@GetMapping("/cars/doors/{doors}")
+	public List<Car> findByDoors(@PathVariable Integer doors) {
+		log.info("REST request to find car by numDoors");
+		
+		return this.carRepository.findByDoors(doors);
+		
+	}
+	
 	// find one
 	/**
 	 * http://localhost:8081/api/cars/1
