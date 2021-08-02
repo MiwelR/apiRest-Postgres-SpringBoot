@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // @Controller // Spring MVC con redireccion a plantillas html dentro del proyecto
@@ -19,7 +20,22 @@ public class HelloController {
 	
 	@GetMapping("/")
 	public String index() {
-		return "API REST is at /api/....";
+		
+		
+		return """
+				<!DOCTYPE html>
+				<html>
+				<head>
+				<meta charset="ISO-8859-1">
+				<title>Awesome API REST</title>
+				</head>
+				<body>
+				<h1 style="color:red;">Bienvenido a la API extraterrestre</h1>
+				<a href="/api/cars">Cars Database</a>
+				
+				</body>
+				</html>
+				""";
 	}
 	
 	/**
@@ -47,6 +63,7 @@ public class HelloController {
 		// log.error("Executing hello world method from logger");
 		return "Adios mundo cruel";
 	}
+
 	
 	
 	

@@ -16,76 +16,81 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.domain.Car;
-import com.example.demo.repository.CarRepository;
+import com.example.demo.dto.CarListDTO;
+import com.example.demo.dto.CountDTO;
+import com.example.demo.dto.MessageDTO;
+import com.example.demo.service.CarService;
+
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 
 @RestController
 @RequestMapping("/api")
-public class CarController {
 
+public class CarController {
+	
 	private final Logger log = LoggerFactory.getLogger(CarController.class);
+
+	// dependencia
+	private CarService carService; 
 	
-	private CarRepository carRepository;
-	
-	public CarController(CarRepository carRepository) {
-		this.carRepository = carRepository;
+	public CarController(CarService carService) { // spring inyecta la dependencia
+		this.carService = carService;
 	}
 	
-	// find by doors
-	/**
-	 * http://localhost:8081/api/cars/doors/1
-	 * @return a response entity with car
-	 */
-	@GetMapping("/cars/doors/{doors}")
-	public List<Car> findByDoors(@PathVariable Integer doors) {
-		log.info("REST request to find car by numDoors");
-		
-		return this.carRepository.findByDoors(doors);
-		
-	}
+
+	/* ============= SPRING CRUD METHODS ================ */
 	
-	// find one
 	/**
-	 * http://localhost:8081/api/cars/1
-	 * @return a response entity with car
+	 * http://localhost:8080/api/cars/1
 	 */
 	@GetMapping("/cars/{id}")
-	public ResponseEntity<Car> findOne(@PathVariable Long id) {
+	@ApiOperation("Buscar coche por id")
+	public ResponseEntity<Car> findById(@ApiParam("Clave primaria car") @PathVariable Long id) {
 		log.info("REST request to find one car");
+
+		Optional<Car> carOpt = this.carService.findById(id);
 		
-		Optional<Car> carOpt = this.carRepository.findById(id);
-		
-		if (carOpt.isPresent()) {
+		// opcion 1
+		if (carOpt.isPresent()) 
 			return ResponseEntity.ok(carOpt.get());
-		}
 		
 		return ResponseEntity.notFound().build();
+		
+		// opcion 2
+//		return carOpt
+//				.map(
+//						car -> ResponseEntity.ok(car))
+//				.orElseGet(
+//						() -> ResponseEntity.notFound().build()
+//				);
+		
 	}
 	
-	
-	// find all
 	/**
-	 * http://localhost:8081/api/cars
+	 * http://localhost:8080/api/cars
 	 */
 	@GetMapping("/cars")
-	public List<Car> findAll() {
+	public List<Car> findAll(){
 		log.info("REST request to find all cars");
-		return this.carRepository.findAll();
+		return this.carService.findAll();
 	}
 	
 	// create one
 	@PostMapping("/cars")
-	public ResponseEntity<Car> create(@RequestBody Car car) {
-		log.info("REST request to create new car");
+	public ResponseEntity<Car> create(@RequestBody Car car){
+		log.info("REST request to create a new car");
 		
-		if (car.getId() != null) { // quiere decir que ya existe
+		if (car.getId() != null) { // HAY ID - EL COCHE YA EXISTE NO PUEDO CREARLO DE NUEVO
 			log.warn("Trying to create a new car with existent id");
 			return ResponseEntity.badRequest().build();
 		}
+
+		return ResponseEntity.ok(this.carService.save(car));
 		
-		return ResponseEntity.ok(this.carRepository.save(car));
 	}
 	
-	// update
+	// update 
 	@PutMapping("/cars")
 	public ResponseEntity<Car> update(@RequestBody Car car) {
 		log.info("REST request to update an existing car");
@@ -93,29 +98,101 @@ public class CarController {
 			log.warn("Trying to update an existing car without id");
 			return ResponseEntity.badRequest().build();
 		}
-
-		return ResponseEntity.ok(this.carRepository.save(car));
+		
+		return ResponseEntity.ok(this.carService.save(car));
+		
 	}
-	
 	
 	// delete one
 	@DeleteMapping("/cars/{id}")
-	public ResponseEntity<Car> delete(@PathVariable Long id) {
+	public ResponseEntity<Car> delete(@PathVariable Long id){
 		log.info("REST request to delete an existing car");
 		
-		this.carRepository.deleteById(id);
+		this.carService.deleteById(id);
 		
 		return ResponseEntity.noContent().build();
+		
 	}
-	
 	
 	// delete all
-	@DeleteMapping("/cars/")
-	public ResponseEntity<Car> deleteAll() {
+	
+	@DeleteMapping("/cars")
+	public ResponseEntity<Car> deleteAll(){
 		log.info("REST request to delete all cars");
 		
-		this.carRepository.deleteAll();
+		this.carService.deleteAll();
+		
+		return ResponseEntity.noContent().build();
+		
+	}
+	
+	@GetMapping("/cars/count")
+	public ResponseEntity<CountDTO> count(){
+		log.info("REST request to count all cars");
+		Long count = this.carService.count();
+		CountDTO dto = new CountDTO(count);
+		dto.setMessage("Que tenga usted un feliz dia :)");
+		return ResponseEntity.ok(dto);
+	}
+	
+	@GetMapping("/cars/hello")
+	public ResponseEntity<String> hello(){
+		return ResponseEntity.ok("Hello");
+	}
+	
+	@GetMapping("/cars/hello2")
+	public ResponseEntity<MessageDTO> hello2(){
+		return ResponseEntity.ok(new MessageDTO("Hello"));
+	}
+	
+	// @PostMapping("/cars/deletemany")
+	@DeleteMapping("/cars/deletemany")
+	public ResponseEntity<Car> deleteMany(@RequestBody CarListDTO carListDto){
+		
+		this.carService.deleteAll(carListDto.getCars());
 		
 		return ResponseEntity.noContent().build();
 	}
+	
+	@GetMapping("/cars/deletemany/{ids}")
+	public ResponseEntity<Car> deleteMany(@PathVariable List<Long> ids){
+		this.carService.deleteAllById(ids);
+		
+		return ResponseEntity.noContent().build();
+	} 
+	
+	
+	
+	/* ============= CUSTOM CRUD METHODS ================ */
+
+	
+	@GetMapping("/cars/manufacturer/{manufacturer}/model/{model}")
+	public List<Car> findByManufacturerAndModel(@PathVariable String manufacturer,
+			@PathVariable String model){
+		return this.carService.findByManufacturerAndModel(manufacturer, model);
+	}
+	
+	@GetMapping("/cars/doors/{doors}")
+	// @ApiIgnore
+	@ApiOperation("Buscar coches filtrando por numero puertas")
+	public List<Car> findByDoors(@PathVariable Integer doors){
+		log.info("REST request to find cars by num doors");
+		return this.carService.findByDoors(doors);
+	}
+	
+	@GetMapping("/cars/doors-gte/{doors}")
+	public List<Car> findByDoorsGreaterThanEqual(@PathVariable Integer doors){
+		return this.carService.findByDoorsGreaterThanEqual(doors);
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 }
